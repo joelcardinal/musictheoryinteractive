@@ -1,0 +1,221 @@
+<html lang="en">
+<head>
+	<title>Modes</title>
+	<style>
+		body {
+			padding: 15px;
+			font-family: sans-serif;
+		}
+		header {
+			text-align: center;
+			margin-bottom: 40px;
+		}
+		table.paleBlueRows {
+			text-align: left;
+			border-bottom: solid 35px #c7c7c7;
+			/*margin: 20px 0;
+			padding-bottom: 20px;*/
+		}
+		table.paleBlueRows {
+      /*border: 1px solid #FFFFFF;*/
+        width: 100%;
+      /*text-align: center;*/
+      border-collapse: collapse;
+    }
+    table.paleBlueRows td, table.paleBlueRows th {
+      border: 1px solid #FFFFFF;
+      padding: 8px 5px;
+    }
+		table.paleBlueRows th {
+			width: 30%;
+		}
+    table.paleBlueRows tbody td {
+      font-size: 13px;
+			width: 10%;
+    }
+    table.paleBlueRows tr:nth-child(even) {
+      background: #D0E4F5;
+    }
+    table.paleBlueRows thead {
+      background: #0B6FA4;
+      border-bottom: 5px solid #FFFFFF;
+    }
+    table.paleBlueRows thead th {
+      font-size: 17px;
+      font-weight: bold;
+      color: #FFFFFF;
+      /*text-align: center;*/
+      border-left: 2px solid #FFFFFF;
+    }
+    table.paleBlueRows thead th:first-child {
+      border-left: none;
+    }
+
+    table.paleBlueRows tfoot {
+      font-size: 14px;
+      font-weight: bold;
+      color: #333333;
+      background: #D0E4F5;
+      border-top: 3px solid #444444;
+    }
+    table.paleBlueRows tfoot td {
+      font-size: 14px;
+    }
+		table.paleBlueRows .purpleCell {
+			background-color: #eee2fb;
+		}
+		/*
+    table.paleBlueRows tr td {
+        text-align: left;
+    }
+		*/
+	</style>
+</head>
+<body>
+	<header>
+		<nav></nav>
+		<h1>Modes</h1>
+		<div>
+			<label for="key">Select Key:</label>
+			<select name="keys" id="key">
+			</select>
+		</div>
+	</header>
+	<main>
+		<section id="modes">
+		</section>		
+	</main>
+	<footer>
+	</footer>
+<script>
+var notes = ["C", "C# / Db", "D", "D# / Eb", "E", "F", "F# / Gb", "G", "G# / Ab", "A", "A# / Bb", "B"];
+var romanNumeralIntervals = ["I",	"II",	"III", "IV",	"V",	"VI",	"VII"];
+var intervals = ["W", "W", "H", "W",	"W", "W",	"H"];
+var harmonization = ["M", "m",	"m", "M",	"M", "m",	"dim"];
+var modes = ["Ionian (Major)","Dorian","Phrygian","Lydian","MixoLydian","Aeolian (Minor)","Locrian"];
+var modesHtml = '';
+(function(){
+	var keyOptionsHTML = '';
+	notes.forEach(function(note,i){
+		keyOptionsHTML += `<option value="${note}" ${i=0?'selected':''}>${note}</option>`;
+	});
+	document.querySelector('#key').innerHTML = keyOptionsHTML;
+	document.querySelector('#key').addEventListener('change', function(e){
+		updateModes();
+	});
+	updateModes();
+}());
+function updateModes(){
+	updateKey();
+	modesTablesHTML = '';
+	modes.forEach(function(mode){
+		var scaleArr = getScaleArr();
+		var tableHtml = `<table class="paleBlueRows">
+												<tr><th class="purpleCell">${notes[0]} ${mode}</th><td>${romanNumeralIntervals.join('</td><td>')}</td></tr>
+												<tr><th>Intervals</th><td>${intervals.join('</td><td>')}</td></tr>
+												<tr><th>Harmonization</th><td>${harmonization.join('</td><td>')}</td></tr>
+												${getScaleAndHarmonizedChordsRows(scaleArr)}
+												${getSecondaryDominantRow(scaleArr)}
+											</table>`;
+		// removed ${getTonicRow()} because it doesn't provide useful information
+		modesTablesHTML += tableHtml;
+		updateIntervalsAndHarmonization();
+	});
+	document.querySelector('#modes').innerHTML = modesTablesHTML;
+}
+function updateKey(){
+	var key = document.querySelector('#key').value;
+	// rotate notes array until key is at index 0 of notes array
+	while( !isMatchingKey(key,notes[0]) ){
+		// notes.unshift(notes.pop()); // backwards, off back onto front
+		notes.push(notes.shift()); // forard, off front onto back
+	}
+}
+function isMatchingKey(key,currentNote){
+	var re = new RegExp(key);
+	if(key === currentNote){
+		return true;
+	}else if(key.length > 1 && re.test(currentNote)){
+		return true
+	}
+	return false;
+}
+function getScaleArr(){
+	var arr = [];
+	var intervalStepsArr = intervals.map(function(value,index,arr){
+		return value === "W" ? 2 : 1;
+	});
+	for(var i=0,len=7;i<len;i++){
+		if(i === 0){
+			arr.push(notes[0]);
+		}else{
+			var relevantArr = intervalStepsArr.slice(0,i);
+			var sum = getSum(relevantArr);
+			arr.push(notes[sum]);
+		}
+	}
+	return arr;
+}
+function getScaleAndHarmonizedChordsRows(scaleArr){
+	var scaleHTML="<tr>";
+	var harmonizedHTML="<tr>";
+	for(var i=0,len=scaleArr.length;i<len;i++){
+		if(i === 0){
+			scaleHTML += `<th>Scale</th><td>${scaleArr[i]}</td>`;
+			harmonizedHTML += `<th>Harmonized Chords</th><td>${scaleArr[0]}${harmonization[i] === 'M' ? '' :  harmonization[i]}</td>`;
+		}else{
+			scaleHTML += `<td>${scaleArr[i]}</td>`;
+			harmonizedHTML += `<td>${scaleArr[i]}${harmonization[i] === 'M' ? '' :  harmonization[i]}</td>`;
+		}
+	}
+	scaleHTML +="</tr>";
+	harmonizedHTML +="</tr>";
+	return scaleHTML+harmonizedHTML;
+}
+function getSum(arr){
+	return arr.reduce(function(a, b){
+		        return a + b;
+		    }, 0);
+}
+function getSecondaryDominantRow(scaleArr){
+	// https://lotusmusic.com/lm_secondarydominants.html
+	var secondaryDominantArr = [];
+	var notesCopy = JSON.parse(JSON.stringify(notes));
+	for(var i=0,len=scaleArr.length;i<len;i++){
+		// rotate notes array until key is at index 0 of notes array
+		while( !isMatchingKey(scaleArr[i],notesCopy[0]) ){
+			notesCopy.push(notesCopy.shift()); // forard, off front onto back
+		}
+		var seventhNote = notesCopy[7];
+		var seventh = function(){
+			if(/\//.test(seventhNote)){
+				return seventhNote.split('/').map(function(value,index,arr){
+					return value.trim();
+				}).join('7 / ')+7;
+			}
+			return seventhNote+7
+		}
+		var minorSecondNote = notesCopy[2];
+		var minorSecond = function(){
+			if(/\//.test(minorSecondNote)){
+				return minorSecondNote.split('/').map(function(value,index,arr){
+					return value.trim();
+				}).join('m7 / ')+'m7';
+			}
+			return minorSecondNote+'m7';
+		}
+		secondaryDominantArr.push(harmonization[i] === 'dim' ? '' : seventh()+' & '+minorSecond());
+
+	}
+	return `<tr><th>Secondary Dominant (V7 & IIm)</th><td>${secondaryDominantArr.join('</td><td>')}</td></tr>`;
+}
+function getTonicRow(){
+	return `<tr><th>${harmonization[0] === 'M' ? 'Major' : 'Minor'} Tonic Chord</th><td colspan="7"></td></tr>`;
+}
+function updateIntervalsAndHarmonization(){
+	intervals.push(intervals.shift());
+	harmonization.push(harmonization.shift());
+}
+</script>
+</body>
+</html>
